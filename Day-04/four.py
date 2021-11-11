@@ -1,3 +1,5 @@
+import re
+
 class Passport:
 
     def __init__(self, dict, line_num) -> None:
@@ -15,7 +17,7 @@ class Passport:
         for key, value in dict.items():
             setattr(self, key, value)
 
-    def check_valid(self) -> bool:
+    def valid_part_one(self) -> bool:
         if all([
             self.byr,
             self.iyr,
@@ -26,11 +28,33 @@ class Passport:
             self.pid]): 
             return True
         else:
-        #     print('I am from ' + str(self.line) + ' and missing: ')
-        #     for attr in ['byr', 'iyr', 'eyr', 'hgt', 'ecl', 'pid', 'cid']:
-        #         if not getattr(self, attr):
-        #             print(attr)
             return False
+
+    def valid_part_two(self) -> bool:        
+        try:
+            assert self.valid_part_one()
+            assert 1920 <= int(self.byr) <= 2002
+            assert 2010 <= int(self.iyr) <= 2020
+            assert 2020 <= int(self.eyr) <= 2030
+            
+            if 'cm' in self.hgt:
+                assert 150 <= int(self.hgt.replace('cm', '')) <= 193
+            elif 'in' in self.hgt:
+                assert 59 <= int(self.hgt.replace('in', '')) <= 76
+            else:
+                return False
+
+            assert re.match('^#[0-9,a-f,A-F]{6}$', self.hcl)
+
+            assert self.ecl in ['amb', 'blu', 'brn', 'gry', 'grn', 'hzl', 'oth']
+            assert re.match('^[0-9]{9}$', self.pid)
+            
+        except AssertionError:
+            return False
+
+        return True
+
+
 
 passports = []
 curr_passport = {}
@@ -52,14 +76,16 @@ with open('input.txt', 'r') as f:
             curr_passport = {}
     passports.append(Passport(curr_passport, i + 1))
 
-valid = 0
+old_valid = 0
+new_valid = 0
 for passport in passports:
-    if passport.check_valid():
-        valid += 1
-    else:
-        print(passport.line)
+    if passport.valid_part_one():
+        old_valid += 1
 
-for passport in passports:
-    if passport.line == 359:
-        print(passport.hcl)
-print(valid)
+    if passport.valid_part_two():
+        new_valid += 1
+        print(passport.byr + ' ' + passport.iyr + ' ' + passport.eyr)
+        print(passport.hgt + ' ' + passport.hcl + ' ' + passport.ecl + ' ' + passport.pid)
+
+print(old_valid)
+print(new_valid)

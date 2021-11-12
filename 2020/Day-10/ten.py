@@ -1,6 +1,10 @@
-adapters = [int(x.rstrip()) for x in open('input.txt')]
+import sys
+
+adapters = [int(x.rstrip()) for x in open(sys.argv[1])]
 adapters.append(0)
 adapters.sort()
+
+paths = []
 
 differences = {
     1: 0,
@@ -10,8 +14,28 @@ differences = {
 
 for i in range(len(adapters)):
     try:
-        differences[adapters[i+1] - adapters[i]] += 1
+        difference = adapters[i+1] - adapters[i]
     except IndexError:
-        differences[3] += 1 # from my phone
+        difference = 3 # from my phone
 
-print(differences[1] * differences[3])
+    differences[difference] += 1
+
+    j = i + 1
+    path_from_here = 0
+    try:
+        while adapters[j] - adapters[i] <= 3:
+            path_from_here += 1
+            j += 1
+    except IndexError:
+        if path_from_here == 0:
+            path_from_here = 1
+
+    paths.append(path_from_here-1)
+    print(f'Paths from {adapters[i]}: {path_from_here}')
+
+
+print(differences)
+print('Part one: ' + str(differences[1] * differences[3]))
+
+# add one for the trivial case
+print('All arrangements: ' + str(sum(paths) + 1))

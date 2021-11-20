@@ -23,7 +23,9 @@ starting_list = [x.split(',') for x in open(sys.argv[1])]
 starting_list = [int(x) for x in starting_list[0]]
 
 turn = 1
-while turn <= 2020:
+while turn <= 30000000:
+    if turn % 100000 == 0:
+        print(f'On turn {turn}')
     if turn <= len(starting_list):
         _ = number_list[starting_list[turn - 1]].speak(turn)
         last_spoken = starting_list[turn - 1]

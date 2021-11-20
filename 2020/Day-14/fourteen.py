@@ -3,8 +3,6 @@ import re
 from collections import defaultdict
 from itertools import combinations
 
-# part one
-
 def apply_mask(in_val, mask):
     or_mask = int(mask.replace('X', '0'), 2)
     and_mask = int(mask.replace('X', '1'), 2)

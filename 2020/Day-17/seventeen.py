@@ -10,14 +10,16 @@ class Cube:
         x = self.coordinates[0]
         y = self.coordinates[1]
         z = self.coordinates[2]
+        w = self.coordinates[3]
 
         self.neighbors = list(product(*[
                 [x-1, x, x+1],
                 [y-1, y, y+1],
-                [z-1, z, z+1]
+                [z-1, z, z+1],
+                [w-1, w, w+1]
             ]))
 
-        self.neighbors.remove((x,y,z))
+        self.neighbors.remove((x,y,z,w))
 
     def __repr__(self) -> str:
         if self.active:
@@ -63,6 +65,7 @@ class Dimension:
         x = [i[0] for i in self.grid.keys()]
         y = [i[1] for i in self.grid.keys()]
         z = [i[2] for i in self.grid.keys()]
+        w = [i[3] for i in self.grid.keys()]
 
         return ((min(x), max(x)), (min(y), max(y)), (min(z), max(z)))
 
@@ -121,9 +124,9 @@ states = [x.rstrip() for x in open(sys.argv[1])]
 for y, row in enumerate(states):
     for x, val in enumerate(row):
         if val == '#':
-            initial_state[(x, y, 0)] = True
+            initial_state[(x, y, 0, 0)] = True
         else:
-            initial_state[(x, y, 0)] = False
+            initial_state[(x, y, 0, 0)] = False
 
 dim = Dimension(initial_state)
 

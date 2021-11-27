@@ -2,6 +2,9 @@ import sys
 import numpy as np
 import re
 from collections import defaultdict
+from itertools import product
+
+from numpy.lib.ufunclike import fix
 
 tile_dict = {}
 
@@ -107,6 +110,9 @@ class Grid:
 
         return '\n'.join(grid)
 
+    def is_empty(self, index):
+        return self.grid[index].id == 0
+
     def get_neighbor_edges(self, index) -> tuple:
         right = self.grid[(index[0] + 1, index[1])].left
         up = self.grid[(index[0], index[1]+1)].bottom
@@ -163,20 +169,29 @@ class Grid:
 
         if len(possible_tiles) == 1:
             self.add_tile(self.loose_tiles.pop(self.loose_tiles.index(possible_tiles[0])), index)
+            return True
         else:
-            print(possible_tiles)
+            return False
 
-
+def neighboring_indecies(i):
+    return (
+        (i[0], i[1] + 1),
+        (i[0] - 1, i[1]), (i[0] + 1, i[1]),
+        (i[0], i[1] - 1)
+    )
 
 grid = Grid(tiles)
-print([x.id for x in tiles])
 
 # pick a random tile to be (0,0)
-grid.add_tile(tiles.pop(3), (0,0))
+grid.add_tile(tiles.pop(0), (0,0))
 print(grid)
 print('Matching:')
-for ind in ((-1, 0), (0, -1), (1, 0), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)):
-    grid.look_for_matches(ind)
-
+tries = 0
+while tries < 1e6 and len(grid.loose_tiles) > 0:
+    for fixed_index in list(grid.grid.keys()):
+        if not grid.is_empty(fixed_index):
+            for index in neighboring_indecies(fixed_index):
+                    grid.look_for_matches(index)
+        
 print(grid)
-print(len(grid.loose_tiles))
+print([x.id for x in grid.loose_tiles])

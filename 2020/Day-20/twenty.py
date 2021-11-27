@@ -115,14 +115,13 @@ class Grid:
 
         return (right, up, left, down)
 
-    def validate_edges(self, index) -> bool:
-        tile_edges = self.grid[index].edges
+    def validate_edges(self, tile, index) -> bool:
         neighbor_edges = self.get_neighbor_edges(index)
 
         try:
             for i in range(4):
                 if neighbor_edges[i] != 0:
-                    assert tile_edges[i] == neighbor_edges[i]
+                    assert tile.edges[i] == neighbor_edges[i]
             return True
         except AssertionError:
             return False
@@ -130,19 +129,54 @@ class Grid:
 
     def add_tile(self, tile, index):
         if self.grid[index].id != 0:
-            raise ValueError(f'Tried to place tile over existing tile at {index}.')
-        self.grid[index] = tile
-            
+            self.loose_tiles.append(tile)
+            raise ValueError(f'Tried to place tile over existing tile at {index}.')            
 
-        assert self.validate_edges(index)
+        if not self.validate_edges(tile, index):
+            self.loose_tiles.append(tile)
+            return False
+        else:
+            self.grid[index] = tile
+
+    def look_for_matches(self, index):
+        needed_edges = self.get_neighbor_edges(index)
+        possible_tiles = []
+        for tile in self.loose_tiles:
+            for _ in range(3):
+                if self.validate_edges(tile, index):
+                    possible_tiles.append(tile)
+                    break
+
+                if all((needed_edges[0], needed_edges[2])) == 0:
+                    tile.flip(1)
+                    if self.validate_edges(tile, index):
+                        possible_tiles.append(tile)
+                        break
+
+                if all((needed_edges[1], needed_edges[3])) == 0:
+                    tile.flip(0)
+                    if self.validate_edges(tile, index):
+                        possible_tiles.append(tile)
+                        break
+
+                tile.rotate()
+
+        if len(possible_tiles) == 1:
+            self.add_tile(self.loose_tiles.pop(self.loose_tiles.index(possible_tiles[0])), index)
+        else:
+            print(possible_tiles)
+
 
 
 grid = Grid(tiles)
-print(grid)
 print([x.id for x in tiles])
-grid.add_tile(tiles.pop(0), (0,0))
-grid.add_tile(tiles.pop(0), (1,1))
-print(grid.size)
-print(grid)
 
 # pick a random tile to be (0,0)
+grid.add_tile(tiles.pop(3), (0,0))
+print(grid)
+print('Matching:')
+for ind in ((-1, 0), (0, -1), (1, 0), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)):
+    grid.look_for_matches(ind)
+
+print(grid)
+print(len(grid.loose_tiles))

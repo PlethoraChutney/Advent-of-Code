@@ -76,6 +76,8 @@ tiles = []
 for id_num, tile in tile_dict.items():
     tiles.append(Tile(id_num, tile))
 
+print(len(tiles))
+
 all_zeros = ['0'*10]*20
 
 class Grid:
@@ -186,12 +188,14 @@ grid = Grid(tiles)
 grid.add_tile(tiles.pop(0), (0,0))
 print(grid)
 print('Matching:')
-tries = 0
-while tries < 1e6 and len(grid.loose_tiles) > 0:
+
+tiles_changed = True
+while len(grid.loose_tiles) > 0 and tiles_changed:
+    tiles_changed = False
     for fixed_index in list(grid.grid.keys()):
         if not grid.is_empty(fixed_index):
             for index in neighboring_indecies(fixed_index):
-                    grid.look_for_matches(index)
+                    tiles_changed = tiles_changed or grid.look_for_matches(index)
         
 print(grid)
 print([x.id for x in grid.loose_tiles])

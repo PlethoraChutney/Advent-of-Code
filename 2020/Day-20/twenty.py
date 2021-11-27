@@ -23,13 +23,7 @@ class Tile:
         
         tile = [list(x) for x in tile]
         self.tile = np.array(tile)
-        # locked will tell us if we need to worry about anything while flipping
-        # tiles that are already in the board. For instance, if we have a tile that
-        # is attached only at the bottom, we may want to flip it horizontally. However,
-        # if we do that, we need to rotate it twice as well.
-        #
-        # [locked_horiz, locked_vert]
-        self.locked = [False, False]
+        self.locked = False
 
     @property
     def edges(self):
@@ -64,39 +58,27 @@ class Tile:
         bottom = '{edge:^{width}}'.format(edge = self.bottom, width = len(mid))
         return '\n'.join([top, mid, bottom])
 
-    def rotate(self, force = False):
-        if any(self.locked) and not force:
+    def rotate(self):
+        if self.locked:
             raise ValueError('Cannot rotate a locked tile.')
         self.tile = np.rot90(self.tile)
 
     def flip(self, axis):
-        if not any(self.locked):
-            self.tile = np.flip(self.tile, axis=axis)
-        # `axis - 1` always checks the other axis, since 0 - 1 = -1,
-        # which is the last (i.e., second) value
-        elif self.locked[axis-1] and not self.locked[axis]:
-            print('Flipping and rotating')
-            self.tile = np.flip(self.tile, axis = axis)
-            self.rotate(True)
-            self.rotate(True)
-        else:
-            raise ValueError(f'Tried to flip a locked tile on axis {axis}')
+        if self.locked:
+            raise ValueError('Cannot flip a locked tile.')
+        self.tile = np.flip(self.tile, axis=axis)
 
 tiles = []
 
 for id_num, tile in tile_dict.items():
     tiles.append(Tile(id_num, tile))
 
-print(tiles[0])
-tiles[0].locked[0] = True
-tiles[0].flip(1)
-print(tiles[0])
-
 all_zeros = ['0'*10]*20
 
 class Grid:
-    def __init__(self) -> None:
+    def __init__(self, tiles) -> None:
         self.grid = defaultdict(lambda: Tile(0, all_zeros))
+        self.loose_tiles = tiles
 
     @property
     def size(self):
@@ -115,18 +97,52 @@ class Grid:
 
     def __repr__(self) -> str:
         grid = []
-        for y in range(self.size[1][0], self.size[1][1]):
+        # mess with ranges to ignore the very edge columns/rows, which
+        # should all be empty (i.e., zero tiles)
+        for y in range(self.size[1][1] - 1, self.size[1][0], -1):
             row = []
-            for x in range(self.size[0][0], self.size[0][1]):
-                row.append(self.grid[(x,y)].id_num)
-            grid.append(row)
+            for x in range(self.size[0][0] + 1, self.size[0][1]):
+                row.append('{id:04}'.format(id = self.grid[(x,y)].id))
+            grid.append(' | '.join(row))
 
-        return str(grid)
+        return '\n'.join(grid)
 
-    def add_tile(self, tile):
-        pass
+    def get_neighbor_edges(self, index) -> tuple:
+        right = self.grid[(index[0] + 1, index[1])].left
+        up = self.grid[(index[0], index[1]+1)].bottom
+        left = self.grid[(index[0] - 1, index[1])].right
+        down = self.grid[(index[0], index[1] -1)].top
+
+        return (right, up, left, down)
+
+    def validate_edges(self, index) -> bool:
+        tile_edges = self.grid[index].edges
+        neighbor_edges = self.get_neighbor_edges(index)
+
+        try:
+            for i in range(4):
+                if neighbor_edges[i] != 0:
+                    assert tile_edges[i] == neighbor_edges[i]
+            return True
+        except AssertionError:
+            return False
 
 
-grid = Grid()
+    def add_tile(self, tile, index):
+        if self.grid[index].id != 0:
+            raise ValueError(f'Tried to place tile over existing tile at {index}.')
+        self.grid[index] = tile
+            
+
+        assert self.validate_edges(index)
+
+
+grid = Grid(tiles)
+print(grid)
+print([x.id for x in tiles])
+grid.add_tile(tiles.pop(0), (0,0))
+grid.add_tile(tiles.pop(0), (1,1))
+print(grid.size)
+print(grid)
 
 # pick a random tile to be (0,0)

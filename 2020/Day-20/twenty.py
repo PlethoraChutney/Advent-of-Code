@@ -1,10 +1,11 @@
+import itertools
 import sys
 import numpy as np
 import re
 from collections import defaultdict
-from itertools import product
+from itertools import chain
 
-from numpy.lib.ufunclike import fix
+from numpy.core.numeric import full
 
 tile_dict = {}
 
@@ -27,6 +28,7 @@ class Tile:
         tile = [list(x) for x in tile]
         self.tile = np.array(tile)
         self.locked = False
+        self.all_full = False
 
     @property
     def edges(self):
@@ -71,6 +73,15 @@ class Tile:
             raise ValueError('Cannot flip a locked tile.')
         self.tile = np.flip(self.tile, axis=axis)
 
+    @property
+    def image(self):
+        # hard code tile shape b/c lazy
+        im = []
+        for row in range(1,9):
+            im.append([int(x) for x in self.tile[row,1:9]])
+
+        return im
+
 tiles = []
 
 for id_num, tile in tile_dict.items():
@@ -104,9 +115,9 @@ class Grid:
         grid = []
         # mess with ranges to ignore the very edge columns/rows, which
         # should all be empty (i.e., zero tiles)
-        for y in range(self.size[1][1] - 1, self.size[1][0], -1):
+        for y in range(self.size[1][1] - 2, self.size[1][0] + 1, -1):
             row = []
-            for x in range(self.size[0][0] + 1, self.size[0][1]):
+            for x in range(self.size[0][0] + 2, self.size[0][1] - 1):
                 row.append('{id:04}'.format(id = self.grid[(x,y)].id))
             grid.append(' | '.join(row))
 
@@ -175,6 +186,17 @@ class Grid:
         else:
             return False
 
+    @property
+    def full_image(self):
+        image = []
+        rows = range(self.size[1][1] - 2, self.size[1][0] + 1, -1)
+        for row_ind in rows:
+            row_tiles = [self.grid[x] for x in self.grid.keys() if x[1] == row_ind]
+            for i in range(8):
+                image.append(list(chain(*[x.image[i] for x in row_tiles if x.id != 0])))
+
+        return np.array(image)
+
 def neighboring_indecies(i):
     return (
         (i[0], i[1] + 1),
@@ -187,15 +209,104 @@ grid = Grid(tiles)
 # pick a random tile to be (0,0)
 grid.add_tile(tiles.pop(0), (0,0))
 print(grid)
+
 print('Matching:')
 
 tiles_changed = True
 while len(grid.loose_tiles) > 0 and tiles_changed:
     tiles_changed = False
+    
     for fixed_index in list(grid.grid.keys()):
-        if not grid.is_empty(fixed_index):
-            for index in neighboring_indecies(fixed_index):
+        if not grid.is_empty(fixed_index) and not grid.grid[fixed_index].all_full:
+            neighbors = neighboring_indecies(fixed_index)
+            if not any(grid.is_empty(x) for x in neighbors):
+                grid.grid[fixed_index].all_full = True
+                continue
+            for index in neighbors:
+                if grid.is_empty(index):
                     tiles_changed = tiles_changed or grid.look_for_matches(index)
+    print('-'*13)
+    print(grid)
+    print('-'*13)
         
 print(grid)
-print([x.id for x in grid.loose_tiles])
+print(f'Loose tiles: {[x.id for x in grid.loose_tiles]}')
+
+# part one
+
+corners = [
+    (grid.size[0][0]+2, grid.size[1][0]+2),
+    (grid.size[0][0]+2, grid.size[1][1]-2),
+    (grid.size[0][1]-2, grid.size[1][0]+2),
+    (grid.size[0][1]-2, grid.size[1][1]-2)
+]
+
+r = 1
+for index in corners:
+    r *= grid.grid[index].id
+print(f'Corner product: {r}')
+
+# Part two
+
+print('Finding sea monsters')
+
+# monster_test is a binary representation of a sea monster
+#
+# if we & the test and the sub-region of the np array and get
+# the monster back, then we know there are 1s in each relevant section
+monster_test = int(''.join([
+    '00000000000000000010', 
+    '10000110000110000111',
+    '01001001001001001000'
+]), 2)
+
+def check_for_monster(image):
+    monsters = 0
+    for col in range(image.shape[0]):
+        for row in range(image.shape[1]):
+            sub_image = image[row:row+3, col:col+20]
+            if sub_image.shape != (3,20):
+                continue
+            sub_image = sub_image.tolist()
+            sub_image = list(chain(*sub_image))
+            sub_image = int(''.join([str(x) for x in sub_image]), 2)
+            if sub_image & monster_test == monster_test:
+                monsters += 1
+
+    return monsters
+
+
+
+def check_all_rotations(image):
+    monsters = 0
+    for _ in range(3):
+        monsters = check_for_monster(image)
+        if monsters != 0:
+            break
+        else:
+            image = np.rot90(image)
+
+    return monsters
+
+def print_image(image):
+    image = image.tolist()
+    rows = []
+    for row in image[::-1]:
+        rows.append(''.join((str(x) for x in row)))
+    print('\n'.join(rows).replace('0', '.').replace('1', '#'))
+
+full_image = grid.full_image
+monsters = check_all_rotations(full_image)
+if monsters == 0:
+    full_image = np.fliplr(full_image)
+monsters = check_all_rotations(full_image)
+if monsters == 0:
+    full_image = np.flipud(full_image)
+monsters = check_all_rotations(full_image)
+if monsters == 0:
+    full_image = np.fliplr(full_image)
+monsters = check_all_rotations(full_image)
+
+# each monster has 15 1s
+print(monsters)
+print(sum(sum(full_image)) - 15 * monsters)

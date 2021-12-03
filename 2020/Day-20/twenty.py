@@ -23,13 +23,13 @@ with open(sys.argv[1], 'r') as f:
                 tile_dict[curr_tile].append(line.replace('#', '1').replace('.', '0'))
 
 class Tile:
-    def __init__(self, id_num, tile) -> None:
+    def __init__(self, id_num, tile, full = False) -> None:
         self.id = int(id_num)
         
         tile = [list(x) for x in tile]
         self.tile = np.array(tile)
         self.locked = False
-        self.all_full = False
+        self.all_full = full
 
     @property
     def edges(self):
@@ -38,8 +38,8 @@ class Tile:
 
         right = self.tile[:,-1]
         top = self.tile[0,:]
-        left = self.tile[:,0]
-        bottom = self.tile[-1,:]
+        left = self.tile[::-1,0]
+        bottom = self.tile[-1,::-1]
 
         # return a decimal just to make it easier for me to grok
         return [int(''.join(x), 2) for x in [right, top, left, bottom]]
@@ -92,7 +92,7 @@ all_zeros = ['0'*10]*20
 
 class Grid:
     def __init__(self, tiles) -> None:
-        self.grid = defaultdict(lambda: Tile(0, all_zeros))
+        self.grid = defaultdict(lambda: Tile(0, all_zeros, True))
         self.loose_tiles = tiles
 
     @property
@@ -159,32 +159,20 @@ class Grid:
     def look_for_matches(self, index):
         needed_edges = self.get_neighbor_edges(index)
         for tile in self.loose_tiles:
-            if not any([x in needed_edges for x in tile.edges]):
+            if not any(x in needed_edges for x in tile.edges):
+                tile.flip(1)
+            if not any(x in needed_edges for x in tile.edges):
+                tile.flip(0)
+            if not any(x in needed_edges for x in tile.edges):
                 continue
+
             for _ in range(3):
-                if self.add_tile(
+                if self.validate_edges(tile, index):
+                    self.add_tile(
                         self.loose_tiles.pop(self.loose_tiles.index(tile)),
                         index
-                    ):
+                    )
                     return True
-
-                if all((needed_edges[0], needed_edges[2])) == 0:
-                    tile.flip(1)
-                    if self.validate_edges(tile, index):
-                        self.add_tile(
-                            self.loose_tiles.pop(self.loose_tiles.index(tile)),
-                            index
-                        )
-                        return True
-
-                if all((needed_edges[1], needed_edges[3])) == 0:
-                    tile.flip(0)
-                    if self.validate_edges(tile, index):
-                        self.add_tile(
-                            self.loose_tiles.pop(self.loose_tiles.index(tile)),
-                            index
-                        )
-                        return True
 
                 tile.rotate()
 
@@ -218,44 +206,42 @@ grid = Grid(tiles)
 
 # pick a random tile to be (0,0)
 grid.add_tile(tiles.pop(0), (0,0))
-print(grid)
 
-print('Matching:')
-
-if sys.argv[2] != 'noalign':
-    tiles_changed = True
-    while len(grid.loose_tiles) > 0 and tiles_changed:
-        tiles_changed = False
-        
-        for fixed_index in list(grid.grid.keys()):
-            if not grid.is_empty(fixed_index) and not grid.grid[fixed_index].all_full:
-                neighbors = neighboring_indecies(fixed_index)
-                if not any(grid.is_empty(x) for x in neighbors):
-                    grid.grid[fixed_index].all_full = True
-                    continue
-                for index in neighbors:
-                    if grid.is_empty(index):
-                        tiles_changed = tiles_changed or grid.look_for_matches(index)
-        print('-'*13)
-        print(grid)
-        print('-'*13)
-            
+while len(grid.loose_tiles) > 0:
+    tiles_changed = False
+    
+    for fixed_index in list(grid.grid.keys()):
+        if not grid.grid[fixed_index].all_full:
+            neighbors = neighboring_indecies(fixed_index)
+            if not any(grid.is_empty(x) for x in neighbors):
+                grid.grid[fixed_index].all_full = True
+                continue
+            for index in neighbors:
+                if grid.is_empty(index):
+                    tiles_changed = tiles_changed or grid.look_for_matches(index)
+    print('-'*13)
     print(grid)
-    print(f'Loose tiles: {[x.id for x in grid.loose_tiles]}')
+    print('-'*13)
 
-    # part one
+    if not tiles_changed:
+        raise ValueError('Uh oh!')
+        
+print(grid)
+print(f'Loose tiles: {[x.id for x in grid.loose_tiles]}')
 
-    corners = [
-        (grid.size[0][0]+2, grid.size[1][0]+2),
-        (grid.size[0][0]+2, grid.size[1][1]-2),
-        (grid.size[0][1]-2, grid.size[1][0]+2),
-        (grid.size[0][1]-2, grid.size[1][1]-2)
-    ]
+# part one
 
-    r = 1
-    for index in corners:
-        r *= grid.grid[index].id
-    print(f'Corner product: {r}')
+corners = [
+    (grid.size[0][0]+2, grid.size[1][0]+2),
+    (grid.size[0][0]+2, grid.size[1][1]-2),
+    (grid.size[0][1]-2, grid.size[1][0]+2),
+    (grid.size[0][1]-2, grid.size[1][1]-2)
+]
+
+r = 1
+for index in corners:
+    r *= grid.grid[index].id
+print(f'Corner product: {r}')
 
 # Part two
 
@@ -300,30 +286,18 @@ def print_image(image):
         rows.append(''.join((str(x) for x in row)))
     print('\n'.join(rows).replace('0', '.').replace('1', '#'))
 
-if sys.argv[2] == 'noalign':
-    with open(sys.argv[1][:-4] + '_image.txt', 'r') as f:
-        image = []
-        for line in f:
-            image.append(list(line.rstrip()))
-    full_image = np.array(image, dtype = int)
-else:
-    full_image = grid.full_image
-    with open(sys.argv[1][:-4] + '_image.txt', 'w') as f:
-        for row in full_image.tolist():
-            f.write(''.join([str(x) for x in row]) + '\n')
-
-monsters = check_all_rotations(full_image)
+monsters = check_all_rotations(grid.full_image)
 if monsters == 0:
-    full_image = np.fliplr(full_image)
-    monsters = check_all_rotations(full_image)
+    full_image = np.fliplr(grid.full_image)
+    monsters = check_all_rotations(grid.full_image)
 if monsters == 0:
-    full_image = np.flipud(full_image)
-    monsters = check_all_rotations(full_image)
+    full_image = np.flipud(grid.full_image)
+    monsters = check_all_rotations(grid.full_image)
 if monsters == 0:
-    full_image = np.fliplr(full_image)
-    monsters = check_all_rotations(full_image)
+    full_image = np.fliplr(grid.full_image)
+    monsters = check_all_rotations(grid.full_image)
 
 # each monster has 15 1s
-print_image(full_image)
+print_image(grid.full_image)
 print(monsters)
-print(sum(sum(full_image)) - 15 * monsters)
+print(sum(sum(grid.full_image)) - 15 * monsters)

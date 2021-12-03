@@ -1,8 +1,11 @@
 import numpy as np
 import sys
 import re
+import time
 
+t0 = time.time()
 diagnostics = [list(x.rstrip()) for x in open(sys.argv[1])]
+t_read = time.time()
 
 # part one
 
@@ -28,6 +31,7 @@ eps = int('1'*len(gamma_array), 2) ^ gamma
 # solution
 print(gamma * eps)
 
+t_one = time.time()
 
 # part two    
 
@@ -79,3 +83,65 @@ diag_array = [x.rstrip() for x in open(sys.argv[1])]
 # solution
 print(oxygen_scrubber(diag_array, '^') * co2_scrubber(diag_array, '^'))
 
+t_vid = time.time()
+
+# vectorize
+
+def list_to_int(bit_list):
+    out = 0
+    for bit in bit_list:
+        # bitshift out left 1 (i.e., multiply by 2), then or it with
+        # the next bit in the list. Or-ing a zero with a bit just keeps
+        # the bit
+        out = (out << 1) | bit
+
+    return out
+
+
+diagnostics = np.array(bit_arrays)
+num_bits = len(diagnostics[0])
+num_diags = len(diagnostics)
+
+position = 0
+working_diag = diagnostics.copy()
+
+while position < num_bits and len(working_diag) > 1:
+    pos_array = working_diag[:, position:position+1].flatten()
+    # can't use argmax b/c we need to break ties with a 1
+    bit_count = np.bincount(pos_array)
+    # if 0 is more common, return False (i.e., 0). Else true (i.e., 1)
+    mcb = int(bit_count[0] <= bit_count[1])
+    working_diag = working_diag[pos_array == mcb, :]
+
+    position += 1
+
+o_gen = list_to_int(working_diag[0].tolist())
+
+position = 0
+working_diag = diagnostics.copy()
+
+while position < num_bits and len(working_diag) > 1:
+    pos_array = working_diag[:, position:position+1].flatten()
+    bit_count = np.bincount(pos_array)
+    # flipped from o_gen, and want the equal case to return 0 now
+    mcb = int(bit_count[0] > bit_count[1])
+    working_diag = working_diag[pos_array == mcb, :]
+
+    position += 1
+
+c_scrubber = list_to_int(working_diag[0].tolist())
+
+print(o_gen * c_scrubber)
+
+t_np = time.time()
+
+time_read = t_read - t0
+time_one = t_one - t_read
+time_slow = t_vid - t_one
+time_np = t_np - t_vid
+
+# regex solution is actually quite fast :)
+print('Time to read data: ', time_read)
+print('Time for part one: ', time_one)
+print('Time for video solution to part two: ', time_slow)
+print('Time for np solution to part two: ', time_np)

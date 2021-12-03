@@ -111,6 +111,7 @@ while position < num_bits and len(working_diag) > 1:
     bit_count = np.bincount(pos_array)
     # if 0 is more common, return False (i.e., 0). Else true (i.e., 1)
     mcb = int(bit_count[0] <= bit_count[1])
+    # select rows with the most common bit in the current position
     working_diag = working_diag[pos_array == mcb, :]
 
     position += 1

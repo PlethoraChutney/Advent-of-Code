@@ -162,11 +162,10 @@ class Grid:
             if not any([x in needed_edges for x in tile.edges]):
                 continue
             for _ in range(3):
-                if self.validate_edges(tile, index):
-                    self.add_tile(
+                if self.add_tile(
                         self.loose_tiles.pop(self.loose_tiles.index(tile)),
                         index
-                    )
+                    ):
                     return True
 
                 if all((needed_edges[0], needed_edges[2])) == 0:

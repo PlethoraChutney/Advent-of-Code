@@ -158,32 +158,36 @@ class Grid:
 
     def look_for_matches(self, index):
         needed_edges = self.get_neighbor_edges(index)
-        possible_tiles = []
         for tile in self.loose_tiles:
+            if not any([x in needed_edges for x in tile.edges]):
+                continue
             for _ in range(3):
                 if self.validate_edges(tile, index):
-                    possible_tiles.append(tile)
-                    break
+                    self.add_tile(
+                        self.loose_tiles.pop(self.loose_tiles.index(tile)),
+                        index
+                    )
+                    return True
 
                 if all((needed_edges[0], needed_edges[2])) == 0:
                     tile.flip(1)
                     if self.validate_edges(tile, index):
-                        possible_tiles.append(tile)
-                        break
+                        self.add_tile(
+                            self.loose_tiles.pop(self.loose_tiles.index(tile)),
+                            index
+                        )
+                        return True
 
                 if all((needed_edges[1], needed_edges[3])) == 0:
                     tile.flip(0)
                     if self.validate_edges(tile, index):
-                        possible_tiles.append(tile)
-                        break
+                        self.add_tile(
+                            self.loose_tiles.pop(self.loose_tiles.index(tile)),
+                            index
+                        )
+                        return True
 
                 tile.rotate()
-
-        if len(possible_tiles) == 1:
-            self.add_tile(self.loose_tiles.pop(self.loose_tiles.index(possible_tiles[0])), index)
-            return True
-        else:
-            return False
 
     @property
     def full_image(self):

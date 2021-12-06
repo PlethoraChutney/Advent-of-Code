@@ -1,8 +1,8 @@
 import sys
-import numpy as np
 from collections import Counter
 
-fish = np.loadtxt(sys.argv[1], dtype=int, delimiter=',').tolist()
+with open(sys.argv[1], 'r') as f:
+    fish = [int(x) for x in f.readline().split(',')]
 # count the number of fish at each day-til-reproduce in the input
 # 
 # we don't technically need to convert to a dict but I do it anyway

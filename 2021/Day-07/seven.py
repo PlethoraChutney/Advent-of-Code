@@ -49,4 +49,4 @@ sums = np.apply_along_axis(sum, 1, differences)
 print(np.min(sums))
 
 # use paired numbers approach for a one-liner
-print(int(min([sum(y) for y in [x*(x+1)/2 for x in np.abs(np.subtract(*np.meshgrid(np.loadtxt(sys.argv[1], int, delimiter=','), np.arange(min_crab, max_crab))))]])))
+print(int(min([sum(y) for y in [x*(x+1)/2 for x in np.abs(np.subtract(*np.meshgrid(np.loadtxt(sys.argv[1], int, delimiter=','), np.arange(0, max(np.loadtxt(sys.argv[1], int, delimiter=','))))))]])))

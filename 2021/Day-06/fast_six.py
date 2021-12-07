@@ -1,4 +1,5 @@
 import sys
+import timeit
 from collections import Counter
 
 with open(sys.argv[1], 'r') as f:
@@ -42,23 +43,26 @@ while day < 80:
 print(sum(fish.values()))
 
 # part two, same as part one but longer
-while day < 256:
-    for key, val in fish.items():
-        new_fish[key-1] = val
+def part_two(day, fish, new_fish):
+    while day < 256:
+        for key, val in fish.items():
+            new_fish[key-1] = val
 
-    try:
-        new_fish[8] = new_fish[-1]
         try:
-            new_fish[6] += new_fish[-1]
+            new_fish[8] = new_fish[-1]
+            try:
+                new_fish[6] += new_fish[-1]
+            except KeyError:
+                new_fish[6] = new_fish[-1]
+            del new_fish[-1]
         except KeyError:
-            new_fish[6] = new_fish[-1]
-        del new_fish[-1]
-    except KeyError:
-        pass
+            pass
 
 
-    fish = new_fish
-    new_fish = {}
-    day += 1
+        fish = new_fish
+        new_fish = {}
+        day += 1
 
-print(sum(fish.values()))
+    print(sum(fish.values()))
+
+print(timeit.timeit(lambda: part_two(day, fish, new_fish), number = 1))

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strings"
 )
@@ -34,10 +35,11 @@ func str_to_bin(in_string string) int {
 	var converted int
 
 	for i := 0; i < len(rune_list); i++ {
-		// ASCII 1 is '49', ASCII 0 is '48'
 		converted = converted << 1
 		if rune_list[i] == '1' {
 			converted += 1
+		} else if rune_list[i] != '0' {
+			converted = converted >> 1
 		}
 	}
 
@@ -51,17 +53,23 @@ func part_one(diags []int) int {
 	var bitlist [len_bits]int
 
 	for i := 0; i < len_bits; i++ {
-		bitlist[i] = balance_bits(diags, len_bits-(i+1))
+		bitlist[i] = balance_bits(diags, len_bits-(i+1), 1, 0)
 	}
 
-	fmt.Println(bitlist)
 	var gamma int
 	var epsilon int
 	for i := 0; i < len(bitlist); i++ {
 		gamma = gamma << 1
 		epsilon = epsilon << 1
 		// if bitlist[i] is > 0, the most common bit was 1, so gamma
-		// should get a 1 bit there. Otherwise, epsilon
+		// should get a 1 bit there. Otherwise, epsilon gets a bump
+		//
+		// bits which are all zero should be ignored, or else epsilon
+		// gets very big
+		if bitlist[i] == -len(diags) {
+			continue
+		}
+
 		if bitlist[i] > 0 {
 			gamma += 1
 		} else {
@@ -73,14 +81,56 @@ func part_one(diags []int) int {
 }
 
 func part_two(diags []int) int {
-	var oxygen, co2 int
+	oxygen := oxygen_rating(diags)
+	co2 := co2_rating(diags)
+
+	fmt.Print(oxygen, co2)
 
 	return oxygen * co2
 }
 
-func balance_bits(diags []int, position int) int {
+func oxygen_rating(diags []int) int {
+	var mcb_filter int
 	var mcb int
+	for i := 0; i < len_bits; i++ {
+		mcb = balance_bits(diags, len_bits-(i+1), 2, mcb_filter)
+		if mcb >= 0 && mcb != -len(diags) {
+			mcb_filter += int(math.Pow(2, float64(len_bits-(i+1))))
+		}
+	}
+
+	return mcb_filter
+}
+
+func co2_rating(diags []int) int {
+	var mcb_filter int
+	var mcb int
+	for i := 0; i < len_bits; i++ {
+		mcb = balance_bits(diags, len_bits-(i+1), 2, mcb_filter)
+		switch {
+		case mcb == -len(diags):
+			continue
+		case mcb > 0:
+			continue
+		case mcb <= 0:
+			mcb_filter += int(math.Pow(2, float64(len_bits-(i+1))))
+		}
+	}
+
+	fmt.Println(mcb_filter)
+
+	return mcb_filter
+}
+
+func balance_bits(diags []int, position int, part int, filter int) int {
+	var mcb int
+	filter = filter >> (position + 1)
 	for i := 0; i < len(diags); i++ {
+		if part == 2 {
+			if diags[i]>>(position+1)^filter != 0 {
+				continue
+			}
+		}
 		if (diags[i]>>position)%2 == 1 {
 			mcb += 1
 		} else {

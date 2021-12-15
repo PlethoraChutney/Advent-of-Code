@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -84,7 +85,7 @@ func part_two(diags []int) int {
 	oxygen := oxygen_rating(diags)
 	co2 := co2_rating(diags)
 
-	fmt.Print(oxygen, co2)
+	fmt.Println(oxygen, co2)
 
 	return oxygen * co2
 }
@@ -106,37 +107,62 @@ func co2_rating(diags []int) int {
 	var mcb_filter int
 	var mcb int
 	for i := 0; i < len_bits; i++ {
+		fmt.Println("Filter for position", i, ":", strconv.FormatInt(int64(mcb_filter), 2))
+
 		mcb = balance_bits(diags, len_bits-(i+1), 2, mcb_filter)
+		fmt.Println("MCB:", mcb)
+
+		fmt.Println(strconv.FormatInt(int64(mcb_filter), 2))
 		switch {
 		case mcb == -len(diags):
+			continue
+		case mcb == 100:
+			mcb_filter += int(math.Pow(2, float64(len_bits-(i+1))))
+		case mcb == -100:
 			continue
 		case mcb > 0:
 			continue
 		case mcb <= 0:
 			mcb_filter += int(math.Pow(2, float64(len_bits-(i+1))))
 		}
-	}
 
-	fmt.Println(mcb_filter)
+	}
 
 	return mcb_filter
 }
 
 func balance_bits(diags []int, position int, part int, filter int) int {
 	var mcb int
-	filter = filter >> (position + 1)
-	for i := 0; i < len(diags); i++ {
-		if part == 2 {
-			if diags[i]>>(position+1)^filter != 0 {
-				continue
+
+	if len(diags) == 1 {
+		switch diags[position] {
+		case 1:
+			return 100
+		case 0:
+			return -100
+		}
+	} else {
+		filter = filter >> (position + 1)
+		for i := 0; i < len(diags); i++ {
+			if part == 2 {
+				if diags[i]>>(position+1)^filter != filter {
+					fmt.Println(strconv.FormatInt(int64(diags[i]>>(position+1)), 2), "does not match", filter)
+					continue
+				}
+				fmt.Println(strconv.FormatInt(int64(diags[i]), 2))
+			}
+			if (diags[i]>>position)%2 == 1 {
+				mcb += 1
+			} else {
+				mcb -= 1
 			}
 		}
-		if (diags[i]>>position)%2 == 1 {
-			mcb += 1
-		} else {
-			mcb -= 1
-		}
+		fmt.Println("")
 	}
 
 	return mcb
+}
+
+func int_to_bin(int) string {
+
 }

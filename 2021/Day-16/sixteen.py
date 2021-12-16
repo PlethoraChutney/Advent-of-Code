@@ -7,7 +7,8 @@ class PacketParser:
 
         self.signal = LifoQueue()
         self.versions = []
-        self.processed = []
+        self.processed = LifoQueue()
+        self.types = LifoQueue()
 
         # subtract two for "0b"
         bitlen = len(bin(input_packet)) - 2
@@ -36,6 +37,27 @@ class PacketParser:
     def empty(self):
         return self.signal.empty()
 
+    @property
+    def solution(self):
+        print('Getting solution')
+        while not self.types.empty():
+            type = self.types.get(False)
+            print('Type: ', type)
+            packet = self.processed.get(False)
+            print('Packet: ', packet)
+
+            if type == 0:
+                self.processed.put(sum([*packet]))
+            elif type == 1:
+                i = 1
+                for j in packet:
+                    i *= j
+                self.processed.put(i)
+            elif type == 6:
+                self.processed.put(int(packet[0] < packet[1]))
+
+        return self.processed.get(False)
+
     def read_packet(self):
         version = 0
         for _ in range(3):
@@ -45,13 +67,19 @@ class PacketParser:
         type = 0
         for _ in range(3):
             type = type << 1 | self.signal.get(False)
+        
+        self.types.put(type)
 
         if type == 4:
-            self.processed.append(self.read_literal())
+            self.processed.put(self.read_literal())
+        
         else:
-            versions, processed = self.read_op()
-            self.versions.extend(versions)
-            self.processed.extend(processed)
+            subpacket = self.read_op()
+            self.versions.extend(subpacket.versions)
+            self.processed.put(subpacket.processed.queue)
+
+        print(self.types.queue)
+        print(self.processed.queue)
 
     def read_literal(self):
         literal = 0
@@ -83,7 +111,7 @@ class PacketParser:
             subpacket_parser = PacketParser(hex(subpacket), subpacket = True)
             while not subpacket_parser.empty:
                 subpacket_parser.read_packet()
-            return subpacket_parser.versions, subpacket_parser.processed
+            return subpacket_parser
             
 
         else:
@@ -105,7 +133,7 @@ class PacketParser:
             while len(self.signal.queue) > len(subpacket_parser.signal.queue):
                 self.signal.get()
 
-            return subpacket_parser.versions, subpacket_parser.processed
+            return subpacket_parser
 
 # literal:
 # test_packet = 'D2FE28'
@@ -120,10 +148,22 @@ class PacketParser:
 # test_packet = 'C0015000016115A2E0802F182340'
 # test_packet = 'A0016C880162017C3686B18A3D4780'
 #
-# parser = PacketParser(test_packet)
+# part two tests -----------------------------------
+# test_packet = 'C200B40A82'
+test_packet = '04005AC33890'
+# test_packet = '880086C3E88112'
+# test_packet = 'CE00C43D881120'
+# test_packet = 'D8005AC2A8F0'
+# test_packet = 'F600BC2D8F'
+# test_packet = '9C005AC2F8F0'
+# test_packet = '9C0141080250320F1802104A08'
 
-with open('input.txt', 'r') as f:
-    parser = PacketParser(f.readline().rstrip())
+parser = PacketParser(test_packet)
+
+# with open('input.txt', 'r') as f:
+#     parser = PacketParser(f.readline().rstrip())
 
 parser.read_packet()
-print(sum(parser.versions))
+print('Part one: ', sum(parser.versions))
+
+print('Part two: ', parser.solution)

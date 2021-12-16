@@ -1,4 +1,5 @@
 from queue import LifoQueue
+from math import prod
 
 class PacketParser:
 
@@ -47,11 +48,12 @@ class PacketParser:
             type = type << 1 | self.signal.get(False)
 
         if type == 4:
-            self.processed.append(self.read_literal())
+            processed = self.read_literal()
         else:
             versions, processed = self.read_op()
             self.versions.extend(versions)
-            self.processed.extend(processed)
+
+        self.processed.append({type: processed})
 
     def read_literal(self):
         literal = 0
@@ -83,7 +85,6 @@ class PacketParser:
             subpacket_parser = PacketParser(hex(subpacket), subpacket = True)
             while not subpacket_parser.empty:
                 subpacket_parser.read_packet()
-            return subpacket_parser.versions, subpacket_parser.processed
             
 
         else:
@@ -105,7 +106,7 @@ class PacketParser:
             while len(self.signal.queue) > len(subpacket_parser.signal.queue):
                 self.signal.get()
 
-            return subpacket_parser.versions, subpacket_parser.processed
+        return subpacket_parser.versions, subpacket_parser.processed
 
 # literal:
 # test_packet = 'D2FE28'
@@ -120,6 +121,8 @@ class PacketParser:
 # test_packet = 'C0015000016115A2E0802F182340'
 # test_packet = 'A0016C880162017C3686B18A3D4780'
 #
+
+# test_packet = '9C0141080250320F1802104A08'
 # parser = PacketParser(test_packet)
 
 with open('input.txt', 'r') as f:
@@ -127,3 +130,34 @@ with open('input.txt', 'r') as f:
 
 parser.read_packet()
 print(sum(parser.versions))
+print(parser.processed[-1])
+
+def complete_processing(proc_dict):
+    for func, proc in proc_dict.items():
+        if func == 4 or type(proc) == int:
+            return proc
+
+        for i in range(len(proc)):
+            if type(proc[i]) == dict:
+                proc[i] = complete_processing(proc[i])
+
+        if func == 0:
+            return sum(proc)
+        elif func == 1:
+            return prod(proc)
+        elif func == 2:
+            return min(proc)
+        elif func == 3:
+            return max(proc)
+        elif func == 5:
+            return int(proc[0] > proc[1])
+        elif func == 6:
+            return int(proc[0] < proc[1])
+        elif func == 7:
+            return int(proc[0] == proc[1])
+        else:
+            return {func: proc}
+
+print(complete_processing(parser.processed[-1]))
+
+    

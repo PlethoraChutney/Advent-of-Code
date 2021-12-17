@@ -1,4 +1,5 @@
 from queue import LifoQueue
+from math import prod
 
 class PacketParser:
 
@@ -7,7 +8,7 @@ class PacketParser:
 
         self.signal = LifoQueue()
         self.versions = []
-        self.processed = LifoQueue()
+        self.processed = []
         self.types = LifoQueue()
 
         # subtract two for "0b"
@@ -71,15 +72,12 @@ class PacketParser:
         self.types.put(type)
 
         if type == 4:
-            self.processed.put(self.read_literal())
-        
+            processed = self.read_literal()
         else:
-            subpacket = self.read_op()
-            self.versions.extend(subpacket.versions)
-            self.processed.put(subpacket.processed.queue)
+            versions, processed = self.read_op()
+            self.versions.extend(versions)
 
-        print(self.types.queue)
-        print(self.processed.queue)
+        self.processed.append({type: processed})
 
     def read_literal(self):
         literal = 0
@@ -111,9 +109,7 @@ class PacketParser:
             subpacket_parser = PacketParser(hex(subpacket), subpacket = True)
             while not subpacket_parser.empty:
                 subpacket_parser.read_packet()
-            return subpacket_parser
             
-
         else:
             num_subpackets = 0
             for _ in range(11):
@@ -133,7 +129,7 @@ class PacketParser:
             while len(self.signal.queue) > len(subpacket_parser.signal.queue):
                 self.signal.get()
 
-            return subpacket_parser
+        return subpacket_parser.versions, subpacket_parser.processed
 
 # literal:
 # test_packet = 'D2FE28'
@@ -148,22 +144,43 @@ class PacketParser:
 # test_packet = 'C0015000016115A2E0802F182340'
 # test_packet = 'A0016C880162017C3686B18A3D4780'
 #
-# part two tests -----------------------------------
-# test_packet = 'C200B40A82'
-test_packet = '04005AC33890'
-# test_packet = '880086C3E88112'
-# test_packet = 'CE00C43D881120'
-# test_packet = 'D8005AC2A8F0'
-# test_packet = 'F600BC2D8F'
-# test_packet = '9C005AC2F8F0'
+
 # test_packet = '9C0141080250320F1802104A08'
+# parser = PacketParser(test_packet)
 
-parser = PacketParser(test_packet)
-
-# with open('input.txt', 'r') as f:
-#     parser = PacketParser(f.readline().rstrip())
+with open('input.txt', 'r') as f:
+    parser = PacketParser(f.readline().rstrip())
 
 parser.read_packet()
-print('Part one: ', sum(parser.versions))
+print(sum(parser.versions))
+print(parser.processed[-1])
 
-print('Part two: ', parser.solution)
+def complete_processing(proc_dict):
+    for func, proc in proc_dict.items():
+        if func == 4 or type(proc) == int:
+            return proc
+
+        for i in range(len(proc)):
+            if type(proc[i]) == dict:
+                proc[i] = complete_processing(proc[i])
+
+        if func == 0:
+            return sum(proc)
+        elif func == 1:
+            return prod(proc)
+        elif func == 2:
+            return min(proc)
+        elif func == 3:
+            return max(proc)
+        elif func == 5:
+            return int(proc[0] > proc[1])
+        elif func == 6:
+            return int(proc[0] < proc[1])
+        elif func == 7:
+            return int(proc[0] == proc[1])
+        else:
+            return {func: proc}
+
+print(complete_processing(parser.processed[-1]))
+
+    

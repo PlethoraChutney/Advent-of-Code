@@ -38,27 +38,6 @@ class PacketParser:
     def empty(self):
         return self.signal.empty()
 
-    @property
-    def solution(self):
-        print('Getting solution')
-        while not self.types.empty():
-            type = self.types.get(False)
-            print('Type: ', type)
-            packet = self.processed.get(False)
-            print('Packet: ', packet)
-
-            if type == 0:
-                self.processed.put(sum([*packet]))
-            elif type == 1:
-                i = 1
-                for j in packet:
-                    i *= j
-                self.processed.put(i)
-            elif type == 6:
-                self.processed.put(int(packet[0] < packet[1]))
-
-        return self.processed.get(False)
-
     def read_packet(self):
         version = 0
         for _ in range(3):
@@ -153,7 +132,6 @@ with open('input.txt', 'r') as f:
 
 parser.read_packet()
 print(sum(parser.versions))
-print(parser.processed[-1])
 
 def complete_processing(proc_dict):
     for func, proc in proc_dict.items():

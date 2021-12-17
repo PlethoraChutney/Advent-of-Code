@@ -133,32 +133,36 @@ with open('input.txt', 'r') as f:
 parser.read_packet()
 print(sum(parser.versions))
 
-def complete_processing(proc_dict):
+def complete_processing(proc_dict, debug = False):
+    if debug:
+        print(proc_dict)
     for func, proc in proc_dict.items():
         if func == 4 or type(proc) == int:
             return proc
 
         for i in range(len(proc)):
             if type(proc[i]) == dict:
-                proc[i] = complete_processing(proc[i])
+                proc[i] = complete_processing(proc[i], debug)
 
-        if func == 0:
-            return sum(proc)
-        elif func == 1:
-            return prod(proc)
-        elif func == 2:
-            return min(proc)
-        elif func == 3:
-            return max(proc)
-        elif func == 5:
-            return int(proc[0] > proc[1])
-        elif func == 6:
-            return int(proc[0] < proc[1])
-        elif func == 7:
-            return int(proc[0] == proc[1])
-        else:
-            return {func: proc}
+    if debug:
+        print(proc_dict)
+    if func == 0:
+        return sum(proc)
+    elif func == 1:
+        return prod(proc)
+    elif func == 2:
+        return min(proc)
+    elif func == 3:
+        return max(proc)
+    elif func == 5:
+        return int(proc[0] > proc[1])
+    elif func == 6:
+        return int(proc[0] < proc[1])
+    elif func == 7:
+        return int(proc[0] == proc[1])
+    else:
+        raise ValueError
 
-print(complete_processing(parser.processed[-1]))
+print(complete_processing(parser.processed[-1], True))
 
     

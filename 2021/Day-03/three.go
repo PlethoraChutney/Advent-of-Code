@@ -2,9 +2,7 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -84,6 +82,7 @@ func part_one(diags []int) int {
 func part_two(diags []int) int {
 	oxygen := oxygen_rating(diags)
 	co2 := co2_rating(diags)
+	fmt.Println("")
 
 	fmt.Println(oxygen, co2)
 
@@ -91,78 +90,90 @@ func part_two(diags []int) int {
 }
 
 func oxygen_rating(diags []int) int {
-	var mcb_filter int
-	var mcb int
-	for i := 0; i < len_bits; i++ {
-		mcb = balance_bits(diags, len_bits-(i+1), 2, mcb_filter)
-		if mcb >= 0 && mcb != -len(diags) {
-			mcb_filter += int(math.Pow(2, float64(len_bits-(i+1))))
+	for i := 0; i < len_bits+1; i++ {
+		var sum int
+		if len(diags) == 1 {
+			break
 		}
+		for j := 0; j < len(diags); j++ {
+			sum += diags[j] >> (len_bits - i) & 1
+		}
+
+		if sum == 0 {
+			continue
+		}
+		proportion_one := float32(sum) / float32(len(diags))
+		var new_mask_bit int
+		if proportion_one >= 0.5 {
+			new_mask_bit = 1
+		} else {
+			new_mask_bit = 0
+		}
+		var new_diags []int
+		for len(diags) > 0 {
+			var d int
+			d, diags = diags[0], diags[1:]
+			if d>>(len_bits-i)&1 == new_mask_bit {
+				new_diags = append(new_diags, d)
+			}
+		}
+		diags = new_diags
 	}
 
-	return mcb_filter
+	return diags[0]
 }
 
 func co2_rating(diags []int) int {
-	var mcb_filter int
-	var mcb int
-	for i := 0; i < len_bits; i++ {
-		fmt.Println("Filter for position", i, ":", strconv.FormatInt(int64(mcb_filter), 2))
 
-		mcb = balance_bits(diags, len_bits-(i+1), 2, mcb_filter)
-		fmt.Println("MCB:", mcb)
-
-		fmt.Println(strconv.FormatInt(int64(mcb_filter), 2))
-		switch {
-		case mcb == -len(diags):
-			continue
-		case mcb == 100:
-			mcb_filter += int(math.Pow(2, float64(len_bits-(i+1))))
-		case mcb == -100:
-			continue
-		case mcb > 0:
-			continue
-		case mcb <= 0:
-			mcb_filter += int(math.Pow(2, float64(len_bits-(i+1))))
+	for i := 0; i < len_bits+1; i++ {
+		var sum int
+		if len(diags) == 1 {
+			break
+		}
+		for j := 0; j < len(diags); j++ {
+			sum += diags[j] >> (len_bits - i) & 1
 		}
 
+		if sum == 0 {
+			continue
+		}
+		proportion_one := float32(sum) / float32(len(diags))
+		var new_mask_bit int
+		if proportion_one < 0.5 {
+			new_mask_bit = 1
+		} else {
+			new_mask_bit = 0
+		}
+		var new_diags []int
+		for len(diags) > 0 {
+			var d int
+			d, diags = diags[0], diags[1:]
+			if d>>(len_bits-i)&1 == new_mask_bit {
+				new_diags = append(new_diags, d)
+			}
+		}
+		diags = new_diags
 	}
 
-	return mcb_filter
+	return diags[0]
 }
 
 func balance_bits(diags []int, position int, part int, filter int) int {
 	var mcb int
 
-	if len(diags) == 1 {
-		switch diags[position] {
-		case 1:
-			return 100
-		case 0:
-			return -100
-		}
-	} else {
-		filter = filter >> (position + 1)
-		for i := 0; i < len(diags); i++ {
-			if part == 2 {
-				if diags[i]>>(position+1)^filter != filter {
-					fmt.Println(strconv.FormatInt(int64(diags[i]>>(position+1)), 2), "does not match", filter)
-					continue
-				}
-				fmt.Println(strconv.FormatInt(int64(diags[i]), 2))
-			}
-			if (diags[i]>>position)%2 == 1 {
-				mcb += 1
-			} else {
-				mcb -= 1
+	filter = filter >> (position + 1)
+	for i := 0; i < len(diags); i++ {
+		if part == 2 {
+			if diags[i]>>(position+1)^filter != filter {
+				continue
 			}
 		}
-		fmt.Println("")
+		if (diags[i]>>position)%2 == 1 {
+			mcb += 1
+		} else {
+			mcb -= 1
+		}
 	}
 
 	return mcb
-}
-
-func int_to_bin(int) string {
-
 }

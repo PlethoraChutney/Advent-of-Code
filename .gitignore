@@ -1,3 +1,4 @@
 venv/
 go.mod
 *.exe
+.vscode

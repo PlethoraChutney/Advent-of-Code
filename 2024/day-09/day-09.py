@@ -27,7 +27,7 @@ class File:
                 to_return.append(str(self.contents[i]))
             except IndexError:
                 to_return.append(".")
-        return "".join(to_return)
+        return "[" + ",".join(to_return) + "]"
     
     @property
     def is_full(self) -> bool:
@@ -72,14 +72,17 @@ while True:
     while not full_file.is_empty and not empty_file.is_full:
         empty_file.append(full_file.pop())
 
-    while empty_file.is_full:
+    while empty_file.is_full and empty_index < len(files) - 2:
         empty_index += 2
-        empty_file = files[empty_index]
-    while full_file.is_empty:
+        try:
+            empty_file = files[empty_index]
+        except IndexError:
+            break
+    while full_file.is_empty and full_index > -len(files):
         full_index -= 2
         full_file = files[full_index]
 
-    if empty_index > len(files) + full_index:
+    if empty_index > len(files) + full_index or full_index <= -len(files) or empty_index >= len(files) - 2:
         break
 
 def eval_files():
@@ -111,12 +114,6 @@ for f in [x for x in files if not x.start_filled]:
 non_empties = [f for f in files if f.start_filled]
 
 for file in non_empties[::-1]:
-
-    print(f"Checking file {file}")
-
-    file_strs = [str(file) for file in files]
-    print("".join(file_strs))
-
     if file.is_empty:
         continue
     space_needed = file.length
@@ -128,7 +125,7 @@ for file in non_empties[::-1]:
         if file_to_fill is None or earliest_file.index < file_to_fill.index:
             file_to_fill = earliest_file
 
-    if file_to_fill is None:
+    if file_to_fill is None or file_to_fill.index > file.index:
         continue
     
     files_by_empty_space[file_to_fill.empty_space].remove(file_to_fill)
@@ -136,8 +133,8 @@ for file in non_empties[::-1]:
 
     file.contents = []
     if file_to_fill.empty_space > 0:
-        fs = files_by_empty_space[file_to_fill.empty_space]
+        fs = files_by_empty_space.get(file_to_fill.empty_space, [])
         fs.append(file_to_fill)
         files_by_empty_space[file_to_fill.empty_space] = sorted(fs, key = lambda f: f.index)
 
-
+print(f"Part two: {eval_files()}")

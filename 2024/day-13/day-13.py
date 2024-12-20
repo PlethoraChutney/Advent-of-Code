@@ -64,24 +64,12 @@ class Machine:
     def solve_machine_pt_two(self):
         prize = np.array(tuple(x + 10000000000000 for x in self.prize))
         coeffs = np.array([[self.a[0], self.b[0]], [self.a[1], self.b[1]]])
-        d_coeffs = np.linalg.det(coeffs)
-        amat = coeffs.copy()
-        amat[:,0] = prize.T
-        bmat = coeffs.copy()
-        bmat[:,1] = prize.T
-        
-        coords = (np.linalg.det(amat), np.linalg.det(bmat))
-        coords = tuple(x / d_coeffs for x in coords)
-        
-        int_coords = np.round(coords)
-        diff = int_coords - coords
-        int_values_okay = all(np.isclose(diff[k], 0, atol = 1e-4) or np.isclose(diff[k], 1, atol = 1e-4) for k in [0,1])
+        deps = np.array(prize)
+        coords = np.linalg.solve(coeffs, deps)
+        coords = np.round(coords).astype(int)
+        if all(coords[0] * self.a + coords[1] * self.b == prize):
+            return coords
 
-        if int_values_okay:
-            print('s')
-            return tuple(int(x) for x in int_coords)
-
-        print('f')
         return (False, False)
             
 
